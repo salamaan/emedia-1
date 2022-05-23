@@ -25,6 +25,7 @@ class Chunk:
             data = self.data.decode('utf-8')
             print("Data -> " + data)
 
+
 class IHDR(Chunk):
     def __init__(self, length, type_, data, crc):
         super().__init__(length, type_, data, crc)
@@ -57,7 +58,7 @@ class PLTE(Chunk):
             data = self.data
 
         super().__str__()
-        print("Data -> " + data)
+        print("Data -> " + str(data))
 
     def get_parsed_data(self):
         decoded_pixels = iter([int(byte, 16) for byte in self.data.hex(' ').split()])

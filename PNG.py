@@ -2,6 +2,7 @@ from chunks import *
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import image
 
 
 class Png:
@@ -42,6 +43,20 @@ class Png:
         for chunk in self.chunks:
             chunk.__str__()
 
+    def plot_clean_image(self, input_image_filename, clean_image_filename):
+        input_img = image.imread(input_image_filename)
+        clean_img = image.imread(clean_image_filename)
+
+        f1 = plt.figure(3)
+
+        plt.subplot(121), plt.imshow(input_img)
+        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+
+        plt.subplot(122), plt.imshow(clean_img)
+        plt.title('Image after anonymization'), plt.xticks([]), plt.yticks([])
+
+        plt.show()
+
     def fourier_and_inverse(self, filename):
         img = cv2.imread(filename, 0)
         fourier = np.fft.fft2(img)
@@ -52,22 +67,17 @@ class Png:
 
         f1 = plt.figure(1)
 
-        plt.subplot(131), plt.imshow(img, cmap='gray')
+        plt.subplot(141), plt.imshow(img, cmap='gray')
         plt.title('Input Image'), plt.xticks([]), plt.yticks([])
 
-        plt.subplot(132), plt.imshow(fourier_mag, cmap='gray')
+        plt.subplot(142), plt.imshow(np.asarray(fourier_inverted, dtype=np.uint8), cmap='gray')
+        plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
+
+        plt.subplot(143), plt.imshow(fourier_mag, cmap='gray')
         plt.title('FFT Magnitude'), plt.xticks([]), plt.yticks([])
 
-        plt.subplot(133), plt.imshow(fourier_phase, cmap='gray')
+        plt.subplot(144), plt.imshow(fourier_phase, cmap='gray')
         plt.title('FFT Phase'), plt.xticks([]), plt.yticks([])
-
-        f2 = plt.figure(2)
-
-        plt.subplot(121), plt.imshow(img, cmap='gray')
-        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(122), plt.imshow(np.asarray(fourier_inverted, dtype=np.uint8), cmap='gray')
-        plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
 
         plt.show()
 
