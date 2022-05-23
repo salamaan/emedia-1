@@ -88,17 +88,15 @@ class Png:
             return None
 
     def create_clean_copy(self, new_file_name):
-        def get_ancilary_chunks():
-            ancilary_chunks = [
-                b'IHDR',
-                b'IDAT',
-                b'IEND'
-            ]
-            if self.get_chunk_by_type(b'IHDR').color_type == 3:
-                ancilary_chunks.insert(1, b'PLTE')
-            return ancilary_chunks
+        ancilary_chunks = [
+            b'IHDR',
+            b'IDAT',
+            b'IEND'
+        ]
 
-        ancilary_chunks = get_ancilary_chunks()
+        if self.get_chunk_by_type(b'IHDR').color_type == 3:
+            ancilary_chunks.insert(1, b'PLTE')
+
         file_handler = open(new_file_name, 'wb')
         file_handler.write(self.PNG_MAGIC_NUMBER)
 
