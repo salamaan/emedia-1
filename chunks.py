@@ -52,13 +52,8 @@ class PLTE(Chunk):
         super().__init__(length, type_, data, crc)
 
     def __str__(self):
-        if self.data:
-            data = self.get_parsed_data()
-        else:
-            data = self.data
-
         super().__str__()
-        print("Data -> " + str(data))
+        print("Data -> " + str(self.get_parsed_data()))
 
     def get_parsed_data(self):
         decoded_pixels = iter([int(byte, 16) for byte in self.data.hex(' ').split()])
