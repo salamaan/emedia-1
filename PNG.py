@@ -1,21 +1,31 @@
 from chunks import *
-import cv2
 import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import image
+from matplotlib import image as mpimg, image
+import os
+import zlib
+from Keys import Keys
+from RSA import RSA
+from pathlib import Path
 
 
 class Png:
+    PNG_MAGIC_NUMBER = b'\x89PNG\r\n\x1a\n'
+
     def __init__(self, file_name):
         try:
             self.file = open(file_name, 'rb')
         except IOError as e:
             raise e
 
-        self.PNG_MAGIC_NUMBER = b'\x89PNG\r\n\x1a\n'
         if self.file.read(8) != self.PNG_MAGIC_NUMBER:
             raise Exception('This file is not a PNG')
         self.chunks = []
+
+        self.idat_data = bytearray()
+
+        self.encrypted_data = bytearray()
+        self.decrypted_data = bytearray()
+        self.after_iend_data = bytearray()
 
     def __del__(self):
         try:
@@ -39,72 +49,75 @@ class Png:
                 self.file.seek(8)
                 break
 
+    def encode_data(self, algorithm, keys_size, filename):
+        data = b''.join(chunk.data for chunk in self.chunks if chunk.type_ == b'IDAT')
+        self.idat_data = zlib.decompress(data)
+
+        keys = Keys(keys_size)
+        public_key = keys.generate_public_key()
+        private_key = keys.generate_private_key()
+        rsa = RSA(public_key, private_key)
+
+        rsa.lib_encrypyt(filename)
+
+        if algorithm == "ecb":
+            self.encrypted_data, self.after_iend_data = rsa.ecb_encrypt(self.idat_data)
+            self.decrypted_data = rsa.ecb_decrypt(self.encrypted_data, self.after_iend_data)
+
+        if algorithm == "cbc":
+            self.encrypted_data, self.after_iend_data = rsa.cbc_encrypt(self.idat_data)
+            self.decrypted_data = rsa.cbc_decrypt(self.encrypted_data, self.after_iend_data)
+
     def print_chunks(self):
         for chunk in self.chunks:
             chunk.__str__()
 
-    def plot_clean_image(self, input_image_filename, clean_image_filename):
-        input_img = image.imread(input_image_filename)
-        clean_img = image.imread(clean_image_filename)
+    def create_image(self, image_path, data):
+        if Path(image_path).is_file():
+            os.remove(image_path)
 
-        f1 = plt.figure(3)
+        tmp_file = open(image_path, 'wb')
+        tmp_file.write(Png.PNG_MAGIC_NUMBER)
 
-        plt.subplot(121), plt.imshow(input_img)
-        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+        for chunk in self.chunks:
+            if chunk.type_ in [b'IDAT']:
+                new_data = zlib.compress(data, 9)
+                new_crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+                chunk_len = len(new_data)
+                tmp_file.write(struct.pack('>I', chunk_len))
+                tmp_file.write(chunk.type_)
+                tmp_file.write(new_data)
+                tmp_file.write(struct.pack('>I', new_crc))
+            else:
+                tmp_file.write(chunk.length)
+                tmp_file.write(chunk.type_)
+                tmp_file.write(chunk.data)
+                tmp_file.write(chunk.crc)
 
-        plt.subplot(122), plt.imshow(clean_img)
-        plt.title('Image after anonymization'), plt.xticks([]), plt.yticks([])
+        tmp_file.close()
 
+    def display_image(self, image_path, title):
+        file = open(image_path, 'rb')
+        file.seek(0)
+        img = mpimg.imread(file)
+        plt.imshow(img)
+        plt.title(title)
         plt.show()
 
-    def fourier_and_inverse(self, filename):
-        img = cv2.imread(filename, 0)
-        fourier = np.fft.fft2(img)
-        fourier_shifted = np.fft.fftshift(fourier)
-        fourier_inverted = np.fft.ifft2(fourier)
-        fourier_mag = np.asarray(20 * np.log10(np.abs(fourier_shifted)), dtype=np.uint8)
-        fourier_phase = np.asarray(np.angle(fourier_shifted), dtype=np.uint8)
+    def display_images(self, path1, path2, path3):
+        img1 = image.imread(path1)
+        img2 = image.imread(path2)
+        img3 = image.imread(path3)
 
         f1 = plt.figure(1)
 
-        plt.subplot(141), plt.imshow(img, cmap='gray')
-        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+        plt.subplot(131), plt.imshow(img1)
+        plt.title('Input image'), plt.xticks([]), plt.yticks([])
 
-        plt.subplot(142), plt.imshow(np.asarray(fourier_inverted, dtype=np.uint8), cmap='gray')
-        plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
+        plt.subplot(132), plt.imshow(img2)
+        plt.title('Decrypted ecb'), plt.xticks([]), plt.yticks([])
 
-        plt.subplot(143), plt.imshow(fourier_mag, cmap='gray')
-        plt.title('FFT Magnitude'), plt.xticks([]), plt.yticks([])
-
-        plt.subplot(144), plt.imshow(fourier_phase, cmap='gray')
-        plt.title('FFT Phase'), plt.xticks([]), plt.yticks([])
+        plt.subplot(133), plt.imshow(img3)
+        plt.title('Decrypted cbc'), plt.xticks([]), plt.yticks([])
 
         plt.show()
-
-    def get_chunk_by_type(self, type_):
-        try:
-            return [chunk for chunk in self.chunks if chunk.type_ == type_][0]
-        except IndexError:
-            return None
-
-    def create_clean_copy(self, new_file_name):
-        ancilary_chunks = [
-            b'IHDR',
-            b'IDAT',
-            b'IEND'
-        ]
-
-        if self.get_chunk_by_type(b'IHDR').color_type == 3:
-            ancilary_chunks.insert(1, b'PLTE')
-
-        file_handler = open(new_file_name, 'wb')
-        file_handler.write(self.PNG_MAGIC_NUMBER)
-
-        for chunk in self.chunks:
-            if chunk.type_ in ancilary_chunks:
-                file_handler.write(chunk.length)
-                file_handler.write(chunk.type_)
-                file_handler.write(chunk.data)
-                file_handler.write(chunk.crc)
-
-        file_handler.close()

@@ -40,8 +40,10 @@ class IHDR(Chunk):
         self.interlace_method = values[6]
 
     def __str__(self):
-        data = (f"Width: {self.width} | Height: {self.height} | BitDepth: {self.bit_depth} | ColorType: {self.color_type} | "
-                            f"CompressionMethod: {self.compression_method} | FilterMethod: {self.filter_method} | InterlaceMethod: {self.interlace_method}")
+        data = (f"Width: {self.width} | Height: {self.height} "
+                f"| BitDepth: {self.bit_depth} | ColorType: {self.color_type} "
+                f"| CompressionMethod: {self.compression_method} "
+                f"| FilterMethod: {self.filter_method} | InterlaceMethod: {self.interlace_method}")
 
         super().__str__()
         print("Data -> " + data)
@@ -89,7 +91,8 @@ class tIME(Chunk):
         self.second = values[5]
 
     def __str__(self):
-        data = f"Last modification: {self.day} {calendar.month_abbr[self.month]}. {self.year} {self.hour}:{self.minute}:{self.second}"
+        data = f"Last modification: {self.day} {calendar.month_abbr[self.month]}." \
+               f" {self.year} {self.hour}:{self.minute}:{self.second}"
 
         super().__str__()
         print("Data -> " + data)
